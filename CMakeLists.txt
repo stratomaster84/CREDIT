@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.17.2)
 
-project(CREDIT_0_01)
+project(CREDIT_0_02)
 
 # Find includes in corresponding build directories
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -23,9 +23,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 # This will find the Qt5 files. You will need a QT5_DIR env variable
 find_package(Qt5Widgets REQUIRED) # Equivalent of QT += widgets
 
-set(SOURCES main.cpp)
+set(SOURCES main.cpp credit.cpp)
 
-#set(HEADERS ...)
+set(HEADERS credit.h)
 
 # This will create you executable
 add_executable(${PROJECT_NAME}  ${SOURCES} ${HEADERS})
