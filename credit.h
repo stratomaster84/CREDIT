@@ -11,8 +11,8 @@
 #define MAX_MONTHS 120
 
 class Credit{
-    std::shared_ptr<QDate[]> _dates;    // указатель на даты
-    std::shared_ptr<std::vector<double>[]> _matrix; // указатель на результирующую матрицу
+    QDate* _dates;    // указатель на даты
+    std::vector<double>* _matrix; // указатель на результирующую матрицу
 
     int months_ = 0;        // количество месяцев
     int dates_count = 0;    // количество дат (месяцы + 1)
@@ -28,11 +28,14 @@ class Credit{
             // вычисляет отношение числа дней между датами "date1" и "date2" к количеству дней в году
 
 public:
-    Credit(){}              // конструктор по-умолчанию
+    Credit(){
+        _dates = nullptr;
+        _matrix = nullptr;
+    }              // конструктор по-умолчанию
     Credit(const Credit&) = delete;             // удалён конструктор копирования
     Credit operator=(const Credit&) = delete;   // удалён копирующий оператор присваивания
-    operator bool() const{        // приведение типа к "bool"
-        return bool(_matrix);
+    ~Credit(){              // деструктор
+        ResetAll();
     }
 
     void CalculateDates(const QDate& Date, const int m);
@@ -42,8 +45,8 @@ public:
     void IncDate(const int date_no);    // увеличивает дату под номером "date_no" на один день
     void DecDate(const int date_no);    // уменьшает дату под номером "date_no" на один день
 
-    std::shared_ptr<QDate[]> GetDates() const;  // возвращает указатель на рассчитанные даты
-    std::shared_ptr<std::vector<double>[]> GetMatrix() const;   // возвращает указатель на рассчитанные данные
+    const QDate* GetDates() const;  // возвращает указатель на рассчитанные даты
+    const std::vector<double>* GetMatrix() const;   // возвращает указатель на рассчитанные данные
     double GetDebt() const;         // возвращает запрошенную сумму
     double GetPercent() const;      // возвращает годовой процент (дробный)
     int GetMonths() const;          // возвращает количество месяцев

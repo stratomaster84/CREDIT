@@ -1,11 +1,18 @@
-#include <iomanip>
+﻿#include <iomanip>
 #include <cmath>
 #include "credit.h"
 
 //==================  Стирает весь объект  =======================
 void Credit::ResetAll(){
-    _dates.reset();
-    _matrix.reset();
+    if(_dates){
+        delete [] _dates;
+        _dates = nullptr;
+    }
+    if(_matrix){
+        ClearMatrixVectors();
+        delete [] _matrix;
+        _matrix = nullptr;
+    }
 }
 //==================  Обнуляет все векторы матрицы  =======================
 void Credit::ClearMatrixVectors(){
@@ -21,24 +28,21 @@ void Credit::BuildAll(const int m){
         months_ = m;
         dates_count = months_ + 1;
     }else{
-        std::ostringstream _ex("");
-        _ex << "ОШИБКА: неверное количество месяцев";
-        throw _ex.str();
+        throw std::string("ОШИБКА: неверное количество месяцев");
     }
     try{
-        _dates = std::shared_ptr<QDate[]>(new QDate[dates_count]);
+        _dates = new QDate[dates_count];
     }catch(...){
-        std::ostringstream _ex("");
-        _ex << "ERROR: bad_alloc while building dates";
-        throw _ex.str();
+        _dates = nullptr;
+        throw std::string("ERROR: bad_alloc while building dates");
     }
     try{
-        _matrix = std::shared_ptr<std::vector<double>[]>(new std::vector<double> [dates_count]);
+        _matrix = new std::vector<double> [dates_count];
     }catch(...){
-        _dates.reset();
-        std::ostringstream _ex("");
-        _ex << "ERROR: bad_alloc while building vectors";
-        throw _ex.str();
+        delete [] _dates;
+        _dates = nullptr;
+        _matrix = nullptr;
+        throw std::string("ERROR: bad_alloc while building vectors");
     }
 }
 //====  Вычисляет отношение числа дней между датами "date1" и "date2" к количеству дней в году  ====
@@ -62,9 +66,7 @@ double Credit::getMonthRatio(const QDate& date1, const QDate& date2){
 //=====  Строит даты выплат на "m" месяцев, начиная с даты "Date"  =====
 void Credit::CalculateDates(const QDate& Date, const int m){
     if(!Date.isValid()){
-        std::ostringstream _ex("");
-        _ex << "ОШИБКА: Неверная дата";
-        throw _ex.str();
+        throw std::string("ОШИБКА: Неверная дата");
     }
     try{
         BuildAll(m);
@@ -82,24 +84,16 @@ void Credit::CalculateDates(const QDate& Date, const int m){
 //==================  ГЛАВНАЯ ФУНКЦИЯ - РАСЧЁТ КРЕДИТА  =======================
 void Credit::CalculateCredit(const double Debt, const double Percent, const bool Cents, const double Def_payment){
     if(Debt<1.0){
-        std::ostringstream _ex("");
-        _ex << "ОШИБКА: Запрошенная сумма меньше 1.00";
-        throw _ex.str();
+        throw std::string("ОШИБКА: Запрошенная сумма меньше 1.00");
     }
     if(Percent <= 0.0 || Percent >= 100.0){
-        std::ostringstream _ex("");
-        _ex << "ОШИБКА: Неверный годовой процент";
-        throw _ex.str();
+        throw std::string("ОШИБКА: Неверный годовой процент");
     }
     if(Def_payment >= Debt){
-        std::ostringstream _ex("");
-        _ex << "ОШИБКА: Взнос по-умолчанию меньше или\nравен запрошенной сумме";
-        throw _ex.str();
+        throw std::string("ОШИБКА: Взнос по-умолчанию меньше или\nравен запрошенной сумме");
     }
     if(!_dates){
-        std::ostringstream _ex("");
-        _ex << "Даты не инициализированы";
-        throw _ex.str();
+        throw std::string("ОШИБКА: Даты не инициализированы");
     }
 
     ClearMatrixVectors();
@@ -125,7 +119,7 @@ void Credit::CalculateCredit(const double Debt, const double Percent, const bool
         }
         vznos_ = Debt*preDebt/preX;
         if(Cents)
-            vznos_ = (double)ceil(100.0*Debt*preDebt/preX)/100.0; // если взнос - дробный
+            vznos_ = (double)ceil(100.0*Debt*preDebt/preX)/100.0;   // если взнос - дробный
         else
             vznos_ = (double)ceil(Debt*preDebt/preX);               // если взнос целочисленный
     }
@@ -193,11 +187,11 @@ void Credit::DecDate(const int date_no){
         _dates[date_no] = tmp_date;
 }
 //==================  Возвращает указатель на рассчитанные даты  =======================
-std::shared_ptr<QDate[]> Credit::GetDates() const{
+const QDate* Credit::GetDates() const{
     return _dates;
 }
 //==================  Возвращает указатель на рассчитанные данные  =======================
-std::shared_ptr<std::vector<double>[]> Credit::GetMatrix() const{
+const std::vector<double>* Credit::GetMatrix() const{
     return _matrix;
 }
 //==================  Возвращает запрошенную сумму  =======================

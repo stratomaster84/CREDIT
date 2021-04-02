@@ -9,16 +9,19 @@ MyTabs::MyTabs(QWidget* pwgt/*= 0*/) : QTabWidget(pwgt)
 
         // Календарь
             calendar = new QCalendarWidget;
+            QFont f = calendar->font();
+            f.setPointSize(12);
+            calendar->setFont(f);
         // Поле с запрошенной суммой
             text_debt = new QLineEdit;
-            text_debt->setText("177019");
+            text_debt->setText("1000000");
             Hptr_layout = new QHBoxLayout;
             Hptr_layout->addWidget(text_debt);
             group_debt = new QGroupBox("Запрошенная сумма");
             group_debt->setLayout(Hptr_layout);
         // Поле с запрошенной суммой
             text_months = new QLineEdit;
-            text_months->setText("24");
+            text_months->setText("60");
             Hptr_layout = new QHBoxLayout;
             Hptr_layout->addWidget(text_months);
             group_months = new QGroupBox("Количество месяцев");
@@ -149,9 +152,9 @@ void MyTabs::slotCalculateClicked(){
     if(but_float->isChecked())
         cents = true;
 
-    if(!credit){            // если ещё не инициализирован
+    if(!credit.GetDates()){            // если ещё не инициализирован
         slotDatesClicked(); // ...то рассчитать даты
-        if(!credit)         // если произошла ошибка
+        if(!credit.GetDates())         // если произошла ошибка
             return;         // ...то выйти из функции
     }
     try {
@@ -166,7 +169,7 @@ void MyTabs::slotCalculateClicked(){
 }
 // =================  Нажата кнопка увеличения даты  ========================
 void MyTabs::slotUpClicked(){
-    if(!credit)
+    if(!credit.GetDates())
         return;
 
     int row;
@@ -179,7 +182,7 @@ void MyTabs::slotUpClicked(){
 }
 // =================  Нажата кнопка уменьшения даты  ========================
 void MyTabs::slotDownClicked(){
-    if(!credit)
+    if(!credit.GetDates())
         return;
 
     int row;
@@ -193,7 +196,7 @@ void MyTabs::slotDownClicked(){
 }
 // =================  РАСПЕЧАТКА РЕЗУЛЬТАТОВ в ТАБЛИЦУ  ========================
 void MyTabs::PrintCreditTable(const Credit& credit){
-    if(!credit)
+    if(!credit.GetDates())
         return;
     auto dates = credit.GetDates();
     auto matrix = credit.GetMatrix();
@@ -253,7 +256,7 @@ void MyTabs::PrintCreditTable(const Credit& credit){
 }
 // =================  РАСПЕЧАТКА ДАТ  ========================
 void MyTabs::PrintDates(const Credit& credit){
-    if(!credit)
+    if(!credit.GetDates())
         return;
     auto dates = credit.GetDates();
     auto months = credit.GetMonths();
