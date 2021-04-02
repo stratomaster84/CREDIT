@@ -1,4 +1,9 @@
-﻿#include <vector>
+﻿
+#ifndef creditH
+#define creditH
+//---------------------------------------------------------------------------
+
+#include <vector>
 #include <memory>
 #include <QDate>
 
@@ -44,3 +49,5 @@ public:
     int GetMonths() const;          // возвращает количество месяцев
     int GetMonthPayment() const;    // возвращает сумму ежемесячного платежа
 };
+//---------------------------------------------------------------------------
+#endif

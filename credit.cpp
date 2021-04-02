@@ -2,47 +2,47 @@
 #include <cmath>
 #include "credit.h"
 
+//==================  Стирает весь объект  =======================
 void Credit::ResetAll(){
-    // стирает весь объект
     _dates.reset();
     _matrix.reset();
 }
+//==================  Обнуляет все векторы матрицы  =======================
 void Credit::ClearMatrixVectors(){
-    // обнуляет все векторы матрицы
     if(_matrix){
         for(int i=0;i<dates_count;i++)
             _matrix[i].clear();
     }
 }
+//==================  Выделяет память под данные  =======================
 void Credit::BuildAll(const int m){
-    // выделяет память под данные
     if(m >= MIN_MONTHS && m <=MAX_MONTHS){
         ResetAll();
         months_ = m;
         dates_count = months_ + 1;
     }else{
         std::ostringstream _ex("");
-        _ex << "ERROR: Wrong count of months";
+        _ex << "ОШИБКА: неверное количество месяцев";
         throw _ex.str();
     }
     try{
-        _dates = std::unique_ptr<QDate[]>(new QDate[dates_count]);
+        _dates = std::shared_ptr<QDate[]>(new QDate[dates_count]);
     }catch(...){
         std::ostringstream _ex("");
-        _ex << "ERROR: bad_alloc in building dates";
+        _ex << "ERROR: bad_alloc while building dates";
         throw _ex.str();
     }
     try{
-        _matrix = std::unique_ptr<std::vector<double>[]>(new std::vector<double> [dates_count]);
+        _matrix = std::shared_ptr<std::vector<double>[]>(new std::vector<double> [dates_count]);
     }catch(...){
         _dates.reset();
         std::ostringstream _ex("");
-        _ex << "ERROR: bad_alloc in building vectors";
+        _ex << "ERROR: bad_alloc while building vectors";
         throw _ex.str();
     }
 }
+//====  Вычисляет отношение числа дней между датами "date1" и "date2" к количеству дней в году  ====
 double Credit::getMonthRatio(const QDate& date1, const QDate& date2){
-    // вычисляет отношение числа дней между датами "date1" и "date2" к количеству дней в году
     int _year1,_year2;
     _year1 = date1.year();
     _year2 = date2.year();
@@ -59,17 +59,17 @@ double Credit::getMonthRatio(const QDate& date1, const QDate& date2){
     result += (double)QDate(_year2,01,01).daysTo(date2)/(double)date2.daysInYear();
     return result;
 }
+//=====  Строит даты выплат на "m" месяцев, начиная с даты "Date"  =====
 void Credit::CalculateDates(const QDate& Date, const int m){
-    // строит даты выплат на "m" месяцев, начиная с даты "Date"
+    if(!Date.isValid()){
+        std::ostringstream _ex("");
+        _ex << "ОШИБКА: Неверная дата";
+        throw _ex.str();
+    }
     try{
         BuildAll(m);
     }catch(...){
         throw;
-    }
-    if(!Date.isValid()){
-        std::ostringstream _ex("");
-        _ex << "ERROR: Wrong date";
-        throw _ex.str();
     }
     QDate CurDate = Date;
     _dates[0] =  CurDate;
@@ -79,32 +79,32 @@ void Credit::CalculateDates(const QDate& Date, const int m){
         CurDate = CurDate.addMonths(1);
     }
 }
+//==================  ГЛАВНАЯ ФУНКЦИЯ - РАСЧЁТ КРЕДИТА  =======================
 void Credit::CalculateCredit(const double Debt, const double Percent, const bool Cents, const double Def_payment){
-    // ГЛАВНАЯ ФУНКЦИЯ - РАСЧЁТ КРЕДИТА
     if(Debt<1.0){
         std::ostringstream _ex("");
-        _ex << "ERROR: Debt is less then 1.0";
+        _ex << "ОШИБКА: Запрошенная сумма меньше 1.00";
         throw _ex.str();
     }
     if(Percent <= 0.0 || Percent >= 100.0){
         std::ostringstream _ex("");
-        _ex << "ERROR: Wrong percent";
+        _ex << "ОШИБКА: Неверный годовой процент";
         throw _ex.str();
     }
     if(Def_payment >= Debt){
         std::ostringstream _ex("");
-        _ex << "ERROR: Def_payment is equal or more then Debt";
+        _ex << "ОШИБКА: Взнос по-умолчанию меньше или\nравен запрошенной сумме";
         throw _ex.str();
     }
     if(!_dates){
         std::ostringstream _ex("");
-        _ex << "ERROR: Dates not initialized";
+        _ex << "Даты не инициализированы";
         throw _ex.str();
     }
 
     ClearMatrixVectors();
 
-    double percent_sum=0.0, debt_sum=0.0, total_sum=0.0;
+    double percent_sum=0.0, debt_sum=0.0, total_sum=0.0;    // переменные для создания последней строки
     double Ostatok,month_percent;
     double preDebt,preX;
     double tmp;
@@ -113,8 +113,9 @@ void Credit::CalculateCredit(const double Debt, const double Percent, const bool
     debt_ = Debt;
     year_percent_ = Percent/100.0;
     if(Def_payment>0)
-        vznos_ = Def_payment;
+        vznos_ = Def_payment;   // если есть, установить взнос по-умолчанию
     else{
+        // расчёт взноса по вычисленной формуле
         preDebt = 1.0 + year_percent_*getMonthRatio(_dates[0],_dates[1]);
         preX = 1.0;
         for(i=1;i<months_;i++){
@@ -124,24 +125,26 @@ void Credit::CalculateCredit(const double Debt, const double Percent, const bool
         }
         vznos_ = Debt*preDebt/preX;
         if(Cents)
-            vznos_ = (double)ceil(100.0*Debt*preDebt/preX)/100.0;
+            vznos_ = (double)ceil(100.0*Debt*preDebt/preX)/100.0; // если взнос - дробный
         else
-            vznos_ = (double)ceil(Debt*preDebt/preX);
+            vznos_ = (double)ceil(Debt*preDebt/preX);               // если взнос целочисленный
     }
 
     Ostatok = Debt;
+    // расчёт строк, кроме двух последних
     for(i=0;i<months_-1;i++){
         month_percent = year_percent_*getMonthRatio(_dates[i],_dates[i+1]);
-        _matrix[i].push_back((double)ceil(100.0*Ostatok*month_percent)/100.0);
+        _matrix[i].push_back((double)ceil(100.0*Ostatok*month_percent)/100.0); // выплата по процентам
         tmp = vznos_ - _matrix[i][0];
         Ostatok -= tmp;
-        _matrix[i].push_back(tmp);
-        _matrix[i].push_back(vznos_);
-        _matrix[i].push_back(Ostatok);
-        percent_sum += _matrix[i][0];
+        _matrix[i].push_back(tmp);      // выплата по долгу
+        _matrix[i].push_back(vznos_);   // взнос
+        _matrix[i].push_back(Ostatok);  // остаток после взноса
+        percent_sum += _matrix[i][0];   // данные для расчёта последней строки
         debt_sum += _matrix[i][1];
         total_sum += _matrix[i][2];
     }
+    // расчёт предпоследней строки
     month_percent = year_percent_*getMonthRatio(_dates[i],_dates[i+1]);
     _matrix[i].push_back((double)ceil(100.0*Ostatok*month_percent)/100.0);
     _matrix[i].push_back(Ostatok);
@@ -149,11 +152,12 @@ void Credit::CalculateCredit(const double Debt, const double Percent, const bool
     _matrix[i].push_back(tmp);
     _matrix[i].push_back(0);
 
+    //расчёт последней строки
     _matrix[i+1].push_back(percent_sum + _matrix[i][0]);
     _matrix[i+1].push_back(debt_sum + _matrix[i][1]);
     _matrix[i+1].push_back(total_sum + _matrix[i][2]);
 
-    if(tmp > vznos_ && Def_payment == 0){
+    if(tmp > vznos_ && Def_payment == 0){   // если последний взнос больше остальных - пересчитать с бОльшим взносом
         try{
             if(Cents)
                 CalculateCredit(Debt,Percent,Cents,vznos_+0.01);
@@ -164,8 +168,8 @@ void Credit::CalculateCredit(const double Debt, const double Percent, const bool
         }
     }
 }
+//===========  Увеличивает дату под номером "date_no" на один день  ===============
 void Credit::IncDate(const int date_no){
-    // увеличивает дату под номером "date_no" на один день
     if(!_dates)
         return;
     if(date_no < 0 || date_no >= dates_count)
@@ -176,8 +180,8 @@ void Credit::IncDate(const int date_no){
     else if(tmp_date != _dates[date_no+1])
         _dates[date_no] = tmp_date;
 }
+//===========  Уменьшает дату под номером "date_no" на один день  ===============
 void Credit::DecDate(const int date_no){
-    // уменьшает дату под номером "date_no" на один день
     if(!_dates)
         return;
     if(date_no < 0 || date_no >= dates_count)
@@ -188,27 +192,28 @@ void Credit::DecDate(const int date_no){
     else if(tmp_date != _dates[date_no-1])
         _dates[date_no] = tmp_date;
 }
+//==================  Возвращает указатель на рассчитанные даты  =======================
 std::shared_ptr<QDate[]> Credit::GetDates() const{
-    // возвращает указатель на рассчитанные даты
     return _dates;
 }
+//==================  Возвращает указатель на рассчитанные данные  =======================
 std::shared_ptr<std::vector<double>[]> Credit::GetMatrix() const{
-    // возвращает указатель на рассчитанные данные
     return _matrix;
 }
+//==================  Возвращает запрошенную сумму  =======================
 double Credit::GetDebt() const{
-    // возвращает запрошенную сумму
     return debt_;
 }
+//==================  Возвращает годовой процент (дробный)  =======================
 double Credit::GetPercent() const{
-    // возвращает годовой процент (дробный)
     return year_percent_;
 }
+//==================  Возвращает количество месяцев  =======================
 int Credit::GetMonths() const{
-    // возвращает количество месяцев
     return months_;
 }
+//==================  Возвращает сумму ежемесячного платежа  =======================
 int Credit::GetMonthPayment() const{
-    // возвращает сумму ежемесячного платежа
     return vznos_;
 }
+//======================================================================================
